@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.126/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.126/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+  <script type="module">
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYWU1ZDY3ZC1mYzM1LTQwMTUtYWEwMy1hZjBlZjdlNmRmZTUiLCJpZCI6MjQ5ODg1LCJpYXQiOjE3Mjk1ODExNjJ9.PMxlzgfO9AnBGlodb-qOO8DFhUMOFc3QMbfFqVKk7xY';
+
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      terrain: Cesium.Terrain.fromWorldTerrain(),
+    });
+
+    let arrowEntities = [];
+
+    function createArrowCoordinates(longitude, latitude, height, heading, length) {
+      const headingRad = Cesium.Math.toRadians(heading + 90);
+      const baseLength = (1 / 7) * length;
+
+      const baseLongitude = longitude - (baseLength * Math.cos(headingRad)) / (111320 * Math.cos(Cesium.Math.toRadians(latitude)));
+      const baseLatitude = latitude - (baseLength * Math.sin(headingRad)) / 110540;
+
+      const angle = 165;
+      const leftWingLongitude = longitude + (length * 0.2 * Math.cos(headingRad + Cesium.Math.toRadians(angle))) / (111320 * Math.cos(Cesium.Math.toRadians(latitude)));
+      const leftWingLatitude = latitude + (length * 0.2 * Math.sin(headingRad + Cesium.Math.toRadians(angle))) / 110540;
+      
+      const rightWingLongitude = longitude + (length * 0.2 * Math.cos(headingRad - Cesium.Math.toRadians(angle))) / (111320 * Math.cos(Cesium.Math.toRadians(latitude)));
+      const rightWingLatitude = latitude + (length * 0.2 * Math.sin(headingRad - Cesium.Math.toRadians(angle))) / 110540;
+
+      const entity = viewer.entities.add({
+        polyline: {
+          positions: Cesium.Cartesian3.fromDegreesArrayHeights([
+            longitude, latitude, height,
+            leftWingLongitude, leftWingLatitude, height,
+            baseLongitude, baseLatitude, height,
+            rightWingLongitude, rightWingLatitude, height,
+            longitude, latitude, height,
+          ]),
+          width: 3,
+          material: Cesium.Color.RED,
+        }
+      });
+      
+      arrowEntities.push(entity);
+    }
+
+    fetch('data.json')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(entry => {
+          createArrowCoordinates(entry.longitude, entry.latitude, entry.height, entry.heading, entry.length);
+        });
+        viewer.zoomTo(arrowEntities);
+      })
+      .catch(error => console.error('Error loading data.json:', error));
+
+  </script>
+</body>
+
+</html>
